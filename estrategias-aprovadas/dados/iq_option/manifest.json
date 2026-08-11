@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "broker": "IQOPTION",
+  "account": "PRACTICE",
+  "timeframe": "1m",
+  "days": 30,
+  "created_at": "2026-08-11T04:06:13.350614+00:00",
+  "pairs": {
+    "ATOMUSD-OTC": {
+      "file": "ATOMUSD_OTC.parquet",
+      "rows": 0,
+      "errors": []
+    },
+    "AUDJPY-OTC": {
+      "file": "AUDJPY_OTC.parquet",
+      "rows": 0,
+      "errors": []
+    },
+    "AUDNZD-OTC": {
+      "file": "AUDNZD_OTC.parquet",
+      "rows": 0,
+      "errors": []
+    },
+    "AUDUSD-OTC": {
+      "file": "AUDUSD_OTC.parquet",
+      "rows": 0,
+      "errors": []
+    },
+    "CADJPY-OTC": {
+      "file": "CADJPY_OTC.parquet",
+      "rows": 0,
+      "errors": []
+    },
+    "XAUUSD-OTC": {
+      "file": "XAUUSD_OTC.parquet",
+      "rows": 0,
+      "errors": []
+    }
+  }
+}
