@@ -96,8 +96,6 @@ class ConfigSistema:
     auto_executar: bool = False
     estrategias_ativas: set[int] = field(default_factory=set)
     pares: list[str] = field(default_factory=lambda: PARES_OTC.copy())
-    whatsapp_url: str = "http://localhost:3001/send-message"
-    whatsapp_numeros: list[str] = field(default_factory=list)
     tolerancia_entrada_segundos: int = 5
 
 
@@ -187,8 +185,18 @@ def selecionar_estrategias() -> set[int]:
     """Permite ao usuário selecionar quais estratégias monitorar."""
     listar_estrategias()
     
+    print("\n💡 Opções de seleção:")
+    print("   • Digite '0' ou 'T' para ativar TODAS as estratégias")
+    print("   • Digite números separados por vírgula (ex: 1,3,5,10)")
+    print("   • Deixe em branco para ativar TODAS as estratégias")
+    
     while True:
-        entrada = input("\n📊 Número das estratégias para monitorar: ").strip()
+        entrada = input("\n📊 Número das estratégias para monitorar: ").strip().upper()
+        
+        # Opção para selecionar todas de uma vez
+        if entrada in ("0", "T"):
+            print("✅ Todas as estratégias ativadas!")
+            return set(ESTRATEGIAS_DISPONIVEIS.keys())
         
         if not entrada:
             print("✅ Todas as estratégias ativadas!")
@@ -216,7 +224,7 @@ def selecionar_estrategias() -> set[int]:
             return selecionadas
         
         except ValueError:
-            print("❌ Formato inválido. Use apenas números separados por vírgula.")
+            print("❌ Formato inválido. Use apenas números separados por vírgula, '0' ou 'T'.")
 
 
 def selecionar_mercado() -> str:
@@ -723,60 +731,6 @@ class GerenciadorSinais:
 # ============================================================================
 # ENVIO DE ALERTAS
 # ============================================================================
-class FilaWhatsApp:
-    """Serializa envios de WhatsApp sem bloquear o monitoramento."""
-    
-    def __init__(self):
-        self._fila: queue.Queue[str] = queue.Queue()
-        self._thread: Optional[threading.Thread] = None
-        self._lock = threading.Lock()
-    
-    def enviar(self, mensagem: str) -> None:
-        with self._lock:
-            if self._thread is None or not self._thread.is_alive():
-                self._thread = threading.Thread(
-                    target=self._trabalhar,
-                    name="whatsapp-superfull",
-                    daemon=True,
-                )
-                self._thread.start()
-        self._fila.put(mensagem)
-    
-    def _trabalhar(self) -> None:
-        while True:
-            mensagem = self._fila.get()
-            try:
-                self._enviar_whatsapp(mensagem)
-            except Exception as erro:
-                print(f"[WHATSAPP] Erro: {erro}")
-            finally:
-                self._fila.task_done()
-    
-    def _enviar_whatsapp(self, mensagem: str) -> int:
-        if requests is None:
-            print("[WHATSAPP] requests não instalado")
-            return 0
-        
-        numeros = config.whatsapp_numeros or ["5591989340275"]
-        enviados = 0
-        
-        for numero in numeros:
-            try:
-                resposta = requests.post(
-                    config.whatsapp_url,
-                    json={"number": numero, "message": mensagem},
-                    timeout=10,
-                )
-                if 200 <= resposta.status_code < 300:
-                    enviados += 1
-                    print(f"[WHATSAPP] Enviado para {numero}")
-            except Exception as erro:
-                print(f"[WHATSAPP] Falha para {numero}: {erro}")
-        
-        return enviados
-
-
-fila_whatsapp = FilaWhatsApp()
 
 
 def formatar_alerta(sinal: Sinal, status: str = "SINAL DETECTADO") -> str:
@@ -848,10 +802,6 @@ def loop_monitoramento(api, gerenciador: GerenciadorSinais) -> None:
                 else:
                     status = "⚠️  SOMENTE ALERTA - Operação manual necessária"
                     print(status)
-                
-                # Envia WhatsApp
-                mensagem = formatar_alerta(sinal, status)
-                fila_whatsapp.enviar(mensagem)
             
             # Status periódico
             contador_ciclos += 1
