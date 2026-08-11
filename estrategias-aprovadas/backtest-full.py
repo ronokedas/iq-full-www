@@ -1086,6 +1086,53 @@ class BacktestEngine:
         
         return trades
     
+    def _strategy_s7_lab(self, symbol: str, df: pd.DataFrame) -> List[Trade]:
+        """S7 (Lab) - Captura de Pavio com Reversão."""
+        trades = []
+        
+        if len(df) < 50:
+            return trades
+        
+        # Calcular EMAs para tendência
+        df_calc = df.copy()
+        df_calc['ema9'] = df_calc['close'].ewm(span=9, adjust=False).mean()
+        df_calc['ema21'] = df_calc['close'].ewm(span=21, adjust=False).mean()
+        
+        for i in range(30, len(df_calc)):
+            candle = df_calc.iloc[i]
+            
+            body = abs(candle['close'] - candle['open'])
+            upper_wick = candle['high'] - max(candle['open'], candle['close'])
+            lower_wick = min(candle['open'], candle['close']) - candle['low']
+            
+            # Tendência de alta: EMA9 > EMA21
+            if candle['ema9'] > candle['ema21']:
+                # Procurar pavio inferior grande (captura de lows)
+                if lower_wick > body * 0.8 and lower_wick > (candle['ema21'] * 0.0005):
+                    trades.append(Trade(
+                        symbol=symbol,
+                        strategy="S7-Lab-CapturaPavio",
+                        timestamp=int(candle['from_ts']),
+                        direction="CALL",
+                        entry_price=float(candle['close']),
+                        result=self._check_result(df, i, "CALL")
+                    ))
+            
+            # Tendência de baixa: EMA9 < EMA21
+            elif candle['ema9'] < candle['ema21']:
+                # Procurar pavio superior grande (captura de highs)
+                if upper_wick > body * 0.8 and upper_wick > (candle['ema21'] * 0.0005):
+                    trades.append(Trade(
+                        symbol=symbol,
+                        strategy="S7-Lab-CapturaPavio",
+                        timestamp=int(candle['from_ts']),
+                        direction="PUT",
+                        entry_price=float(candle['close']),
+                        result=self._check_result(df, i, "PUT")
+                    ))
+        
+        return trades
+    
     def run_backtest(self, strategies: Optional[List[str]] = None) -> Dict[str, StrategyStats]:
         """Executa backtest para todas ou estratégias selecionadas."""
         print("\n🚀 Iniciando backtest...")
