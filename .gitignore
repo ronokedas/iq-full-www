@@ -46,3 +46,5 @@ htmlcov/
 .DS_Store
 Thumbs.db
 ```
+# Arquivo de dataset grande (mantido apenas localmente)
+estrategias-aprovadas/ml_dataset.csv

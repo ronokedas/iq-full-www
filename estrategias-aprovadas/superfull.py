@@ -511,53 +511,102 @@ class DetectorS5(DetectorEstrategias):
         return None
 
 
+def agregar_m5(velas_m1: list[Vela]) -> list[dict]:
+    """Agrupa velas M1 em candles M5 alinhados ao relógio."""
+    grupos: dict[int, list[Vela]] = {}
+    for v in velas_m1:
+        bucket = v.inicio // 300
+        if bucket not in grupos:
+            grupos[bucket] = []
+        grupos[bucket].append(v)
+    
+    m5_lista = []
+    sorted_buckets = sorted(grupos.keys())
+    for bucket in sorted_buckets:
+        v_list = grupos[bucket]
+        v_list.sort(key=lambda x: x.inicio)
+        is_complete = len(v_list) == 5 or bucket < sorted_buckets[-1]
+        m5_candle = {
+            'bucket': bucket,
+            'inicio': v_list[0].inicio,
+            'abertura': v_list[0].abertura,
+            'fechamento': v_list[-1].fechamento,
+            'maxima': max(v.maxima for v in v_list),
+            'minima': min(v.minima for v in v_list),
+            'm15_bucket': v_list[0].inicio // 900,
+            'completa': is_complete,
+        }
+        m5_lista.append(m5_candle)
+    return m5_lista
+
+
 class DetectorS16(DetectorEstrategias):
     """S16 - Engolfo M5 na Abertura M15
     
-    Engolfo de M5 na primeira vela de nova M15.
+    Engolfo de M5 na primeira vela de nova M15 com pullback na abertura da engolfada.
     """
     
     def detectar(self, estado: EstadoPar) -> Optional[Sinal]:
-        if len(estado.historico) < 3:
+        if len(estado.historico) < 15:
             return None
         
-        velas = list(estado.historico)[-3:]
-        v1, v2, v3 = velas
+        velas_m1 = list(estado.historico)
+        atual_m1 = velas_m1[-1]
         
-        # Verifica se v3 é a primeira vela de nova M15
-        periodo_v2 = v2.inicio // 900
-        periodo_v3 = v3.inicio // 900
+        m5_lista = agregar_m5(velas_m1)
+        m5_completas = [c for c in m5_lista if c['completa']]
         
-        if periodo_v2 == periodo_v3:
-            return None  # Ainda está na mesma M15
+        if len(m5_completas) < 2:
+            return None
         
-        # Engolfo de alta: v2 vermelha, v3 verde, v3 fecha acima do High de v2
-        if v2.eh_vermelha and v3.eh_verde and v3.fechamento > v2.maxima:
-            return Sinal(
-                estrategia_id="S16",
-                estrategia_nome="Engolfo M5 na Abertura M15",
-                par=estado.par,
-                direcao="call",
-                timeframe="M5",
-                timestamp=v3.inicio,
-                preco_entrada=v3.fechamento,
-                expiracao=300,
-                padrao="Engolfo de alta na virada M15"
-            )
+        candle2 = m5_completas[-2]
+        candle3 = m5_completas[-1]
         
-        # Engolfo de baixa: v2 verde, v3 vermelha, v3 fecha abaixo do Low de v2
-        if v2.eh_verde and v3.eh_vermelha and v3.fechamento < v2.minima:
-            return Sinal(
-                estrategia_id="S16",
-                estrategia_nome="Engolfo M5 na Abertura M15",
-                par=estado.par,
-                direcao="put",
-                timeframe="M5",
-                timestamp=v3.inicio,
-                preco_entrada=v3.fechamento,
-                expiracao=300,
-                padrao="Engolfo de baixa na virada M15"
-            )
+        # Verificar se candle3 é a primeira vela M5 de uma nova M15
+        if candle3['m15_bucket'] == candle2['m15_bucket']:
+            return None
+        
+        # A vela M1 atual deve pertencer à M5 seguinte (candle4, a 2ª M5 do ciclo M15)
+        if atual_m1.inicio // 900 != candle3['m15_bucket']:
+            return None
+        if atual_m1.inicio // 300 != candle3['bucket'] + 1:
+            return None
+        
+        reference_level = float(candle2['abertura'])
+        
+        # Engolfo de alta: candle2 vermelha, candle3 verde fecha acima do High da candle2
+        is_c2_red = candle2['fechamento'] < candle2['abertura']
+        is_c3_green = candle3['fechamento'] > candle3['abertura']
+        if is_c2_red and is_c3_green and candle3['fechamento'] > candle2['maxima']:
+            if atual_m1.minima <= reference_level <= atual_m1.maxima:
+                return Sinal(
+                    estrategia_id="S16",
+                    estrategia_nome="Engolfo M5 na Abertura M15",
+                    par=estado.par,
+                    direcao="call",
+                    timeframe="M5",
+                    timestamp=atual_m1.inicio,
+                    preco_entrada=reference_level,
+                    expiracao=300,
+                    padrao="Engolfo de alta M5 na virada M15 (pullback na abertura)"
+                )
+        
+        # Engolfo de baixa: candle2 verde, candle3 vermelha fecha abaixo do Low da candle2
+        is_c2_green = candle2['fechamento'] > candle2['abertura']
+        is_c3_red = candle3['fechamento'] < candle3['abertura']
+        if is_c2_green and is_c3_red and candle3['fechamento'] < candle2['minima']:
+            if atual_m1.minima <= reference_level <= atual_m1.maxima:
+                return Sinal(
+                    estrategia_id="S16",
+                    estrategia_nome="Engolfo M5 na Abertura M15",
+                    par=estado.par,
+                    direcao="put",
+                    timeframe="M5",
+                    timestamp=atual_m1.inicio,
+                    preco_entrada=reference_level,
+                    expiracao=300,
+                    padrao="Engolfo de baixa M5 na virada M15 (pullback na abertura)"
+                )
         
         return None
 
@@ -565,47 +614,70 @@ class DetectorS16(DetectorEstrategias):
 class DetectorS17(DetectorEstrategias):
     """S17 - Rompimento Dupla Posição
     
-    Rompimento M5 de uma dupla posição da mesma cor.
+    Rompimento M5 de uma dupla posição da mesma cor com pullback na abertura da penúltima vela.
     """
     
     def detectar(self, estado: EstadoPar) -> Optional[Sinal]:
-        if len(estado.historico) < 3:
+        if len(estado.historico) < 15:
             return None
         
-        velas = list(estado.historico)[-3:]
-        v1, v2, v3 = velas
+        velas_m1 = list(estado.historico)
+        atual_m1 = velas_m1[-1]
         
-        # Dupla verde: v1 e v2 verdes, v2 contida em v1
-        if v1.eh_verde and v2.eh_verde and v2.maxima <= v1.maxima:
-            # v3 rompe acima de v1
-            if v3.eh_verde and v3.fechamento > v1.maxima:
-                return Sinal(
-                    estrategia_id="S17",
-                    estrategia_nome="Rompimento Dupla Posição",
-                    par=estado.par,
-                    direcao="call",
-                    timeframe="M5",
-                    timestamp=v3.inicio,
-                    preco_entrada=v3.fechamento,
-                    expiracao=300,
-                    padrao="Rompimento dupla posição de alta"
-                )
+        m5_lista = agregar_m5(velas_m1)
+        m5_completas = [c for c in m5_lista if c['completa']]
         
-        # Dupla vermelha: v1 e v2 vermelhas, v2 contida em v1
-        if v1.eh_vermelha and v2.eh_vermelha and v2.minima >= v1.minima:
-            # v3 rompe abaixo de v1
-            if v3.eh_vermelha and v3.fechamento < v1.minima:
-                return Sinal(
-                    estrategia_id="S17",
-                    estrategia_nome="Rompimento Dupla Posição",
-                    par=estado.par,
-                    direcao="put",
-                    timeframe="M5",
-                    timestamp=v3.inicio,
-                    preco_entrada=v3.fechamento,
-                    expiracao=300,
-                    padrao="Rompimento dupla posição de baixa"
-                )
+        if len(m5_completas) < 3:
+            return None
+        
+        candle1 = m5_completas[-3]
+        candle2 = m5_completas[-2]
+        candle3 = m5_completas[-1]
+        
+        # A vela M1 atual deve pertencer à M5 seguinte a candle3 (candle4)
+        if atual_m1.inicio // 300 != candle3['bucket'] + 1:
+            return None
+        
+        both_green = (candle1['fechamento'] > candle1['abertura']) and (candle2['fechamento'] > candle2['abertura'])
+        both_red = (candle1['fechamento'] < candle1['abertura']) and (candle2['fechamento'] < candle2['abertura'])
+        
+        if both_green:
+            # Candle2 contida na Candle1: High2 <= High1
+            if candle2['maxima'] <= candle1['maxima']:
+                # Candle3 rompe acima do High da Candle1
+                if candle3['fechamento'] > candle1['maxima']:
+                    reference_level = float(candle2['abertura'])
+                    if atual_m1.minima <= reference_level <= atual_m1.maxima:
+                        return Sinal(
+                            estrategia_id="S17",
+                            estrategia_nome="Rompimento Dupla Posição",
+                            par=estado.par,
+                            direcao="call",
+                            timeframe="M5",
+                            timestamp=atual_m1.inicio,
+                            preco_entrada=reference_level,
+                            expiracao=300,
+                            padrao="Rompimento dupla posição de alta (pullback)"
+                        )
+        
+        elif both_red:
+            # Candle2 contida na Candle1: Low2 >= Low1
+            if candle2['minima'] >= candle1['minima']:
+                # Candle3 rompe abaixo do Low da Candle1
+                if candle3['fechamento'] < candle1['minima']:
+                    reference_level = float(candle2['abertura'])
+                    if atual_m1.minima <= reference_level <= atual_m1.maxima:
+                        return Sinal(
+                            estrategia_id="S17",
+                            estrategia_nome="Rompimento Dupla Posição",
+                            par=estado.par,
+                            direcao="put",
+                            timeframe="M5",
+                            timestamp=atual_m1.inicio,
+                            preco_entrada=reference_level,
+                            expiracao=300,
+                            padrao="Rompimento dupla posição de baixa (pullback)"
+                        )
         
         return None
 

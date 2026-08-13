@@ -743,42 +743,61 @@ class BacktestEngine:
             if candle3['m15_bucket'] == candle2['m15_bucket']:
                 continue
             
+            # candle3 precisa estar FECHADA para confirmar o engolfo.
+            # candle3 é a última M5 disponível em m5_data (i == len(m5_data)-1)?
+            # Se sim, ainda não temos a vela seguinte (candle4) pra checar o pullback -> pula.
+            if i + 1 >= len(m5_data):
+                continue
+            candle4 = m5_data[i + 1]
+            
+            # Vela engolfada (candle2) precisa pertencer ao MESMO bucket M15 que candle3
+            # engoliu -- ou seja, candle4 ainda deve estar dentro da mesma M15 de candle3
+            # (2ª M5 da nova M15), senão o "toque na abertura" perde o sentido de retração
+            # dentro do mesmo M15.
+            if candle4['m15_bucket'] != candle3['m15_bucket']:
+                continue
+            
+            reference_level = float(candle2['open'])
+            m1_touch_start = (i + 1) * 5       # início de candle4 (M1)
+            m1_touch_end = min((i + 2) * 5, len(df))
+            
             # Engolfo de alta: candle2 vermelha, candle3 verde fecha acima do High da candle2
             if self._is_red(candle2) and self._is_green(candle3):
                 if candle3['close'] > candle2['high']:
-                    # Encontrar M1 correspondente dentro de candle3
-                    m1_start = i * 5
-                    m1_end = min((i+1)*5, len(df))
-                    for k in range(m1_start, m1_end):
+                    # Esperar candle4 tocar a abertura da vela engolfada (candle2) -> pullback
+                    for k in range(m1_touch_start, m1_touch_end):
                         if k >= len(df):
                             break
-                        trades.append(Trade(
-                            symbol=symbol,
-                            strategy="S16-EngolfoM5M15",
-                            timestamp=int(df.iloc[k]['from_ts']),
-                            direction="CALL",
-                            entry_price=float(df.iloc[k]['close']),
-                            result=self._check_result(df, k, "CALL")
-                        ))
-                        break
+                        m1_candle = df.iloc[k]
+                        if m1_candle['low'] <= reference_level <= m1_candle['high']:
+                            trades.append(Trade(
+                                symbol=symbol,
+                                strategy="S16-EngolfoM5M15",
+                                timestamp=int(m1_candle['from_ts']),
+                                direction="CALL",
+                                entry_price=reference_level,
+                                result=self._check_result(df, k, "CALL")
+                            ))
+                            break
             
             # Engolfo de baixa: candle2 verde, candle3 vermelha fecha abaixo do Low da candle2
             elif self._is_green(candle2) and self._is_red(candle3):
                 if candle3['close'] < candle2['low']:
-                    m1_start = i * 5
-                    m1_end = min((i+1)*5, len(df))
-                    for k in range(m1_start, m1_end):
+                    # Esperar candle4 tocar a abertura da vela engolfada (candle2) -> pullback
+                    for k in range(m1_touch_start, m1_touch_end):
                         if k >= len(df):
                             break
-                        trades.append(Trade(
-                            symbol=symbol,
-                            strategy="S16-EngolfoM5M15",
-                            timestamp=int(df.iloc[k]['from_ts']),
-                            direction="PUT",
-                            entry_price=float(df.iloc[k]['close']),
-                            result=self._check_result(df, k, "PUT")
-                        ))
-                        break
+                        m1_candle = df.iloc[k]
+                        if m1_candle['low'] <= reference_level <= m1_candle['high']:
+                            trades.append(Trade(
+                                symbol=symbol,
+                                strategy="S16-EngolfoM5M15",
+                                timestamp=int(m1_candle['from_ts']),
+                                direction="PUT",
+                                entry_price=reference_level,
+                                result=self._check_result(df, k, "PUT")
+                            ))
+                            break
         
         return trades
     
@@ -810,6 +829,15 @@ class BacktestEngine:
             candle2 = m5_data[i-1]
             candle3 = m5_data[i]
             
+            # candle3 precisa estar FECHADA para confirmar o rompimento, e precisamos
+            # de candle4 (a vela seguinte) para checar o pullback no nível rompido.
+            if i + 1 >= len(m5_data):
+                continue
+            candle4 = m5_data[i + 1]
+            
+            m1_touch_start = (i + 1) * 5       # início de candle4 (M1)
+            m1_touch_end = min((i + 2) * 5, len(df))
+            
             # Mesma cor nas duas primeiras
             both_green = self._is_green(candle1) and self._is_green(candle2)
             both_red = self._is_red(candle1) and self._is_red(candle2)
@@ -817,42 +845,50 @@ class BacktestEngine:
             if both_green:
                 # Candle2 contida na candle1: High2 <= High1
                 if candle2['high'] <= candle1['high']:
-                    # Candle3 rompe acima do High da candle1
+                    # Candle3 rompe acima do High da candle1 (confirmado no fechamento)
                     if candle3['close'] > candle1['high']:
-                        m1_start = i * 5
-                        m1_end = min((i+1)*5, len(df))
-                        for k in range(m1_start, m1_end):
+                        # Nível de retração = abertura da penúltima vela (candle2),
+                        # que foi a vela imediatamente anterior ao rompimento
+                        reference_level = float(candle2['open'])
+                        # Esperar candle4 tocar de volta essa abertura -> pullback
+                        for k in range(m1_touch_start, m1_touch_end):
                             if k >= len(df):
                                 break
-                            trades.append(Trade(
-                                symbol=symbol,
-                                strategy="S17-RompimentoDuplaPosicao",
-                                timestamp=int(df.iloc[k]['from_ts']),
-                                direction="CALL",
-                                entry_price=float(df.iloc[k]['close']),
-                                result=self._check_result(df, k, "CALL")
-                            ))
-                            break
+                            m1_candle = df.iloc[k]
+                            if m1_candle['low'] <= reference_level <= m1_candle['high']:
+                                trades.append(Trade(
+                                    symbol=symbol,
+                                    strategy="S17-RompimentoDuplaPosicao",
+                                    timestamp=int(m1_candle['from_ts']),
+                                    direction="CALL",
+                                    entry_price=reference_level,
+                                    result=self._check_result(df, k, "CALL")
+                                ))
+                                break
             
             elif both_red:
                 # Candle2 contida na candle1: Low2 >= Low1
                 if candle2['low'] >= candle1['low']:
-                    # Candle3 rompe abaixo do Low da candle1
+                    # Candle3 rompe abaixo do Low da candle1 (confirmado no fechamento)
                     if candle3['close'] < candle1['low']:
-                        m1_start = i * 5
-                        m1_end = min((i+1)*5, len(df))
-                        for k in range(m1_start, m1_end):
+                        # Nível de retração = abertura da penúltima vela (candle2),
+                        # que foi a vela imediatamente anterior ao rompimento
+                        reference_level = float(candle2['open'])
+                        # Esperar candle4 tocar de volta essa abertura -> pullback
+                        for k in range(m1_touch_start, m1_touch_end):
                             if k >= len(df):
                                 break
-                            trades.append(Trade(
-                                symbol=symbol,
-                                strategy="S17-RompimentoDuplaPosicao",
-                                timestamp=int(df.iloc[k]['from_ts']),
-                                direction="PUT",
-                                entry_price=float(df.iloc[k]['close']),
-                                result=self._check_result(df, k, "PUT")
-                            ))
-                            break
+                            m1_candle = df.iloc[k]
+                            if m1_candle['low'] <= reference_level <= m1_candle['high']:
+                                trades.append(Trade(
+                                    symbol=symbol,
+                                    strategy="S17-RompimentoDuplaPosicao",
+                                    timestamp=int(m1_candle['from_ts']),
+                                    direction="PUT",
+                                    entry_price=reference_level,
+                                    result=self._check_result(df, k, "PUT")
+                                ))
+                                break
         
         return trades
     

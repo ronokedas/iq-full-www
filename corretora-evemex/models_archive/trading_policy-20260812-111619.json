@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-08-12T10:03:42.181503-03:00",
+  "timezone": "America/Sao_Paulo",
+  "strategies": {
+    "s01": {
+      "strategy": "S01",
+      "samples": 94020,
+      "active": true,
+      "threshold": 0.65,
+      "min_accepted_winrate": 0.6,
+      "allowed_hours_brasilia": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "hour_min_samples": 100,
+      "oos_signals_65": 46977,
+      "oos_winrate_65": 0.7746982565936522,
+      "folds": [
+        {
+          "fold": 1,
+          "test_samples": 18804,
+          "base_winrate": 0.7281961284833014,
+          "signals_60": 16972,
+          "winrate_60": 0.7479377798727316,
+          "signals_65": 15729,
+          "winrate_65": 0.7615233009091487
+        },
+        {
+          "fold": 2,
+          "test_samples": 18804,
+          "base_winrate": 0.7659540523292916,
+          "signals_60": 17341,
+          "winrate_60": 0.7778098148895681,
+          "signals_65": 15486,
+          "winrate_65": 0.790843342373757
+        },
+        {
+          "fold": 3,
+          "test_samples": 18804,
+          "base_winrate": 0.7563284407572857,
+          "signals_60": 16911,
+          "winrate_60": 0.7667198864644315,
+          "signals_65": 15762,
+          "winrate_65": 0.7719832508564903
+        }
+      ]
+    },
+    "s13": {
+      "strategy": "S13",
+      "samples": 5812,
+      "active": true,
+      "threshold": 0.65,
+      "min_accepted_winrate": 0.6,
+      "allowed_hours_brasilia": [
+        0,
+        2,
+        3,
+        8,
+        9,
+        10,
+        11,
+        13,
+        16,
+        18
+      ],
+      "hour_min_samples": 100,
+      "oos_signals_65": 2320,
+      "oos_winrate_65": 0.7155172413793104,
+      "folds": [
+        {
+          "fold": 1,
+          "test_samples": 1163,
+          "base_winrate": 0.6990541702493551,
+          "signals_60": 767,
+          "winrate_60": 0.7431551499348109,
+          "signals_65": 434,
+          "winrate_65": 0.8087557603686636
+        },
+        {
+          "fold": 2,
+          "test_samples": 1162,
+          "base_winrate": 0.6987951807228916,
+          "signals_60": 1143,
+          "winrate_60": 0.7016622922134733,
+          "signals_65": 1084,
+          "winrate_65": 0.705719557195572
+        },
+        {
+          "fold": 3,
+          "test_samples": 1163,
+          "base_winrate": 0.6698194325021496,
+          "signals_60": 977,
+          "winrate_60": 0.6693961105424769,
+          "signals_65": 802,
+          "winrate_65": 0.6783042394014963
+        }
+      ]
+    },
+    "s16": {
+      "strategy": "S16",
+      "samples": 24971,
+      "active": false,
+      "threshold": 0.65,
+      "min_accepted_winrate": 0.6,
+      "allowed_hours_brasilia": [],
+      "hour_min_samples": 100,
+      "oos_signals_65": 25,
+      "oos_winrate_65": 0.64,
+      "folds": [
+        {
+          "fold": 1,
+          "test_samples": 4994,
+          "base_winrate": 0.5198237885462555,
+          "signals_60": 0,
+          "winrate_60": null,
+          "signals_65": 0,
+          "winrate_65": null
+        },
+        {
+          "fold": 2,
+          "test_samples": 4994,
+          "base_winrate": 0.5290348418101722,
+          "signals_60": 0,
+          "winrate_60": null,
+          "signals_65": 0,
+          "winrate_65": null
+        },
+        {
+          "fold": 3,
+          "test_samples": 4995,
+          "base_winrate": 0.6908908908908908,
+          "signals_60": 153,
+          "winrate_60": 0.738562091503268,
+          "signals_65": 25,
+          "winrate_65": 0.64
+        }
+      ]
+    }
+  }
+}
