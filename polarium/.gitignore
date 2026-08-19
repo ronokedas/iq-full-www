@@ -1,0 +1,15 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Local credentials, browser profiles and runtime state
+polarium_edge_profile/
+polarium_session*.dpapi
+polarium_session*.json
+logs/
+
+# Local market data and generated backtests
+data/
+backtest/*/results/
+scratch/*
+!scratch/*.py

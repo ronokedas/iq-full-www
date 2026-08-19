@@ -1,0 +1,28 @@
+Collecting pandas-ta
+  Using cached pandas_ta-0.4.71b0-py3-none-any.whl.metadata (2.3 kB)
+Collecting numba==0.61.2 (from pandas-ta)
+  Using cached numba-0.61.2-cp312-cp312-win_amd64.whl.metadata (2.9 kB)
+Requirement already satisfied: numpy>=2.2.6 in D:\trader\OB\meuspreferidos\python_runtime\Lib\site-packages (from pandas-ta) (2.5.2)
+Requirement already satisfied: pandas>=2.3.2 in D:\trader\OB\meuspreferidos\python_runtime\Lib\site-packages (from pandas-ta) (3.0.5)
+Collecting tqdm>=4.67.1 (from pandas-ta)
+  Using cached tqdm-4.70.0-py3-none-any.whl.metadata (57 kB)
+Collecting llvmlite<0.45,>=0.44.0dev0 (from numba==0.61.2->pandas-ta)
+  Using cached llvmlite-0.44.0-cp312-cp312-win_amd64.whl.metadata (5.0 kB)
+Collecting numpy>=2.2.6 (from pandas-ta)
+  Using cached numpy-2.2.6-cp312-cp312-win_amd64.whl.metadata (60 kB)
+Requirement already satisfied: python-dateutil>=2.8.2 in D:\trader\OB\meuspreferidos\python_runtime\Lib\site-packages (from pandas>=2.3.2->pandas-ta) (2.9.0.post0)
+Requirement already satisfied: tzdata in D:\trader\OB\meuspreferidos\python_runtime\Lib\site-packages (from pandas>=2.3.2->pandas-ta) (2026.3)
+Requirement already satisfied: six>=1.5 in D:\trader\OB\meuspreferidos\python_packages (from python-dateutil>=2.8.2->pandas>=2.3.2->pandas-ta) (1.17.0)
+Requirement already satisfied: colorama in D:\trader\OB\meuspreferidos\python_packages (from tqdm>=4.67.1->pandas-ta) (0.4.6)
+Using cached pandas_ta-0.4.71b0-py3-none-any.whl (240 kB)
+Using cached numba-0.61.2-cp312-cp312-win_amd64.whl (2.8 MB)
+Using cached llvmlite-0.44.0-cp312-cp312-win_amd64.whl (30.3 MB)
+Using cached numpy-2.2.6-cp312-cp312-win_amd64.whl (12.6 MB)
+Using cached tqdm-4.70.0-py3-none-any.whl (80 kB)
+Installing collected packages: tqdm, numpy, llvmlite, numba, pandas-ta
+  Attempting uninstall: numpy
+    Found existing installation: numpy 2.5.2
+    Uninstalling numpy-2.5.2:
+      Successfully uninstalled numpy-2.5.2
+
+Successfully installed llvmlite-0.44.0 numba-0.61.2 numpy-2.2.6 pandas-ta-0.4.71b0 tqdm-4.70.0
